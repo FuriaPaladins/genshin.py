@@ -28,6 +28,7 @@ class BannerCharacter(APIModel):
     name: str
     element: str
     rarity: typing.Literal[4, 5]
+    is_invisible: typing.Optional[bool]
 
 
 class BannerWeapon(APIModel):
@@ -87,6 +88,13 @@ class DoubleRewardDetail(APIModel):
     remaining: int = Aliased("left")
 
 
+class SignInDetail(APIModel):
+    """Sign in detail."""
+    status: int
+    progress: int
+    total: int
+
+
 class AbyssDetail(APIModel):
     """Spiral abyss detail."""
 
@@ -125,6 +133,7 @@ class Event(APIModel):
 
     exploration_detail: typing.Optional[EventExplorationDetail] = Aliased("explore_detail", default=None)
     double_reward_detail: typing.Optional[DoubleRewardDetail] = Aliased("double_detail", default=None)
+    sign_in_detail: typing.Optional[SignInDetail] = None
     abyss_detail: typing.Optional[AbyssDetail] = Aliased("tower_detail", default=None)
     theater_detail: typing.Optional[TheaterDetail] = Aliased("role_combat_detail", default=None)
 
@@ -138,5 +147,6 @@ class GenshinEventCalendar(APIModel):
 
     character_banners: typing.Sequence[Banner] = Aliased("avatar_card_pool_list")
     weapon_banners: typing.Sequence[Banner] = Aliased("weapon_card_pool_list")
+    chronicled_banner: typing.Sequence[Banner] = Aliased("selected_mixed_card_pool_list", default=[])
     events: typing.Sequence[Event] = Aliased("act_list")
     challenges: typing.Sequence[Event] = Aliased("fixed_act_list")
