@@ -36,5 +36,5 @@ class EnvisagedEchoes(APIModel):
     This may not be a namedtuple due to how pydantic handles them.
     """
 
-    characters: typing.Sequence[EnvisagedEcho]
+    characters: typing.Sequence[EnvisagedEcho] = Aliased("list")
     is_unlocked: bool = Aliased("is_unlock")
