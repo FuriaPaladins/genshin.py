@@ -22,7 +22,7 @@ class EnvisagedEchoStatus(enum.IntEnum):
 
 class EnvisagedEcho(APIModel):
 
-    character_id: int = Aliased("avatar_id")
+    id: int = Aliased("avatar_id")
     name: str
     icon: str
     status: EnvisagedEchoStatus
