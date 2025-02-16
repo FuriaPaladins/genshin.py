@@ -169,6 +169,18 @@ class GenshinBattleChronicleClient(base.BaseBattleChronicleClient):
 
         return models.ImgTheater(**data)
 
+    async def get_envisaged_echoes(
+        self,
+        uid: int,
+        *,
+        lang: typing.Optional[str] = None,
+    ) -> models.EnvisagedEchoes:
+        """Get Genshin Impact imaginarium theater runs."""
+
+        data = await self._request_genshin_record("char_master", uid, lang=lang)
+
+        return models.EnvisagedEchoes(**data)
+
     @typing.overload
     async def get_genshin_notes(
         self,
