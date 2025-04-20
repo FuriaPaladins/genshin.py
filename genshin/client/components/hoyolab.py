@@ -513,9 +513,22 @@ class HoyolabClient(base.BaseClient):
         return [models.WebEvent(**i) for i in data["list"]]
 
     @base.region_specific(types.Region.OVERSEAS)
-    async def get_accompany_characters(self) -> typing.Sequence[models.AccompanyCharacterGame]:
-        """Get a list of accompany characters."""
+    async def get_accompany_characters(
+        self, *, lang: typing.Optional[str] = None
+    ) -> typing.Sequence[models.AccompanyCharacterGame]:
+        """Get a list of accompany characters, this endpoint doesn't require cookies."""
         data = await self.request_bbs(
-            "community/painter/api/getChannelRoleList", cache=client_cache.cache_key("accp_chars"), method="POST"
+            "community/painter/api/getChannelRoleList",
+            cache=client_cache.cache_key("accp_chars"),
+            method="POST",
+            lang=lang,
         )
         return [models.AccompanyCharacterGame(**i) for i in data["game_roles_list"]]
+
+    @base.region_specific(types.Region.OVERSEAS)
+    async def accompany_character(self, *, role_id: int, topic_id: int) -> models.AccompanyResult:
+        """Accompany a character, role_id and topic_id can be found by calling get_accompany_characters."""
+        data = await self.request_bbs(
+            "community/apihub/api/user/accompany/role", params=dict(role_id=role_id, topic_id=topic_id)
+        )
+        return models.AccompanyResult(**data)

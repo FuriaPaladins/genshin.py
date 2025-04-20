@@ -6,6 +6,7 @@ from genshin.constants import GEETEST_RETCODES
 
 __all__ = [
     "ERRORS",
+    "AccountMuted",
     "AccountNotFound",
     "AlreadyClaimed",
     "AuthkeyException",
@@ -34,7 +35,11 @@ class GenshinException(Exception):
     original: str = ""
     msg: str = ""
 
-    def __init__(self, response: typing.Mapping[str, typing.Any] = {}, msg: typing.Optional[str] = None) -> None:
+    def __init__(
+        self, response: typing.Optional[typing.Mapping[str, typing.Any]] = None, msg: typing.Optional[str] = None
+    ) -> None:
+        response = response or {}
+
         self.retcode = response.get("retcode", self.retcode)
         self.original = response.get("message", "")
         self.msg = msg or self.msg or self.original
@@ -232,6 +237,13 @@ class VerificationCodeRateLimited(GenshinException):
     msg = "Too many verification code requests for the account."
 
 
+class AccountMuted(GenshinException):
+    """Account is muted."""
+
+    retcode = 2010
+    msg = "Account is muted."
+
+
 _TGE = type[GenshinException]
 _errors: dict[int, typing.Union[_TGE, str, tuple[_TGE, typing.Optional[str]]]] = {
     # misc hoyolab
@@ -239,6 +251,7 @@ _errors: dict[int, typing.Union[_TGE, str, tuple[_TGE, typing.Optional[str]]]] =
     -108: "Invalid language.",
     -110: VisitsTooFrequently,
     1028: VisitsTooFrequently,
+    2010: AccountMuted,
     # game record
     10001: InvalidCookies,
     -10001: "Malformed request.",
@@ -263,6 +276,7 @@ _errors: dict[int, typing.Union[_TGE, str, tuple[_TGE, typing.Optional[str]]]] =
     -2001: (RedemptionInvalid, "Redemption code has expired."),
     -2003: (RedemptionInvalid, "Redemption code is incorrectly formatted."),
     -2004: RedemptionInvalid,
+    -2006: (RedemptionInvalid, "Redemption code has reached max usage limit."),
     -2014: (RedemptionInvalid, "Redemption code not activated"),
     -2016: RedemptionCooldown,
     -2017: RedemptionClaimed,

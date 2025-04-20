@@ -314,18 +314,19 @@ class Activities(APIModel):
         if not values.get("activities"):
             return values
 
-        slugs = {
+        slugs = {  # type: ignore
             field.json_schema_extra["gslug"]: name
             for name, field in cls.model_fields.items()
             if isinstance(field.json_schema_extra, dict) and field.json_schema_extra.get("gslug")
         }
 
-        for activity in values["activities"]:
+        activites: list[dict[str, typing.Any]] = values["activities"]
+        for activity in activites:
             for name, value in activity.items():
                 if "exists_data" not in value:
                     continue
 
-                name = slugs.get(name, name)
-                values[name] = value if value["exists_data"] else None
+                name_ = slugs.get(name, name)
+                values[name_] = value if value["exists_data"] else None
 
         return values

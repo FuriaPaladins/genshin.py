@@ -34,7 +34,7 @@ class Unique(abc.ABC):
 
 def Aliased(
     alias: typing.Optional[str] = None,
-    default: typing.Any = None,
+    default: typing.Any = ...,
     **kwargs: typing.Any,
 ) -> typing.Any:
     """Create an aliased field."""
@@ -42,7 +42,7 @@ def Aliased(
 
 
 def add_timezone(value: datetime.datetime) -> datetime.datetime:
-    return value.astimezone(CN_TIMEZONE)
+    return value.replace(tzinfo=CN_TIMEZONE)
 
 
 def convert_datetime(value: typing.Optional[typing.Mapping[str, typing.Any]]) -> typing.Optional[datetime.datetime]:
