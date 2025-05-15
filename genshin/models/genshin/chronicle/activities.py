@@ -199,7 +199,7 @@ class PotionStage(APIModel):
     difficulty: int
     difficulty_id: int
     score: int
-    score_multiplier: int = Aliased("factor")
+    score_multiplier: float = Aliased("factor")
 
     characters: typing.Sequence[PotionCharacter] = Aliased("avatars")
     buffs: typing.Sequence[PotionBuff]
@@ -316,7 +316,7 @@ class Activities(APIModel):
 
         slugs = {  # type: ignore
             field.json_schema_extra["gslug"]: name
-            for name, field in cls.model_fields.items()
+            for name, field in Activities.model_fields.items()
             if isinstance(field.json_schema_extra, dict) and field.json_schema_extra.get("gslug")
         }
 

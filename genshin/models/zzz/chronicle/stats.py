@@ -79,7 +79,9 @@ class ZZZBaseBangboo(APIModel):
     rarity: typing.Literal["S", "A"]
     level: int
     star: int
-    icon: str = Aliased("bangboo_rectangle_url")
+    icon: str = pydantic.Field(
+        validation_alias=pydantic.aliases.AliasChoices("bangboo_square_url", "bangboo_rectangle_url")
+    )
 
 
 class ZZZUserStats(APIModel):
