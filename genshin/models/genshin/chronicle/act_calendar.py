@@ -17,6 +17,8 @@ __all__ = (
     "EventReward",
     "GenshinEventCalendar",
     "TheaterDetail",
+    "SignInDetail",
+    "StygianDetail"
 )
 
 
@@ -87,6 +89,13 @@ class DoubleRewardDetail(APIModel):
     remaining: int = Aliased("left")
 
 
+class SignInDetail(APIModel):
+    """Sign in detail."""
+    status: int
+    progress: int
+    total: int
+
+
 class AbyssDetail(APIModel):
     """Spiral abyss detail."""
 
@@ -102,6 +111,14 @@ class TheaterDetail(APIModel):
     unlocked: bool = Aliased("is_unlock")
     max_round: int = Aliased("max_round_id")
     has_data: bool
+
+
+class StygianDetail(APIModel):
+    """Stygian Onslaught detail."""
+
+    unlocked: bool = Aliased("is_unlock")
+    difficulty: int
+    seconds_taken: int = Aliased("second")
 
 
 class Event(APIModel):
@@ -125,8 +142,10 @@ class Event(APIModel):
 
     exploration_detail: typing.Optional[EventExplorationDetail] = Aliased("explore_detail", default=None)
     double_reward_detail: typing.Optional[DoubleRewardDetail] = Aliased("double_detail", default=None)
+    sign_in_detail: typing.Optional[SignInDetail] = None
     abyss_detail: typing.Optional[AbyssDetail] = Aliased("tower_detail", default=None)
     theater_detail: typing.Optional[TheaterDetail] = Aliased("role_combat_detail", default=None)
+    stygian_detail: typing.Optional[StygianDetail] = Aliased("hard_challenge_detail", default=None)
 
     @pydantic.field_validator("description", mode="after")
     def __format_description(cls, v: str) -> str:
