@@ -137,6 +137,7 @@ class Exploration(APIModel):
     boss_list: typing.Sequence[BossKill]
     area_exploration_list: typing.Sequence[AreaExploration]
     natlan_reputation: typing.Optional[NatlanReputation] = Aliased("natan_reputation", default=None)
+    statue_level: typing.Optional[int] = Aliased("seven_statue_level", default=None)
 
     @property
     def explored(self) -> float:
