@@ -216,6 +216,7 @@ class ZZZNotes(APIModel):
     card_sign: ZZZCardSignState
     member_card: ZZZMemberCard
     temple_running: ZZZTempleRunning
+    bounty_commission: BountyCommission
 
     @pydantic.field_validator("scratch_card_completed", mode="before")
     @classmethod
