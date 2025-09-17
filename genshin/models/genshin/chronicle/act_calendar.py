@@ -1,8 +1,9 @@
 """Event calendar models."""
-
 import typing
+import datetime
 
 import pydantic
+from pydantic import model_validator
 
 from genshin.models.model import Aliased, APIModel, DateTime
 
@@ -119,14 +120,14 @@ class StygianDetail(APIModel):
     unlocked: bool = Aliased("is_unlock")
     difficulty: int
     seconds_taken: int = Aliased("second")
-    outbreak_end: timedelta
+    outbreak_end: datetime.datetime
 
     @model_validator(mode="before")
     def extract_outbreak_end(cls, data):
         if isinstance(data, dict):
             sub = data.get("sub")
             if sub and "seconds" in sub:
-                data["outbreak_end"] = timedelta(seconds=sub["seconds"])
+                data["outbreak_end"] = datetime.datetime.now() + datetime.timedelta(seconds=sub["seconds"])
         return data
 
 
