@@ -114,21 +114,26 @@ class TheaterDetail(APIModel):
     has_data: bool
 
 
-class StygianDetail(APIModel):
-    """Stygian Onslaught detail."""
-
-    unlocked: bool = Aliased("is_unlock")
-    difficulty: int
-    seconds_taken: int = Aliased("second")
-    outbreak_end: datetime.datetime
+class StygianOutbreak(APIModel):
+    seconds: int
+    end: datetime.datetime
 
     @model_validator(mode="before")
     def extract_outbreak_end(cls, data):
         if isinstance(data, dict):
             sub = data.get("sub")
             if sub and "seconds" in sub:
-                data["outbreak_end"] = datetime.datetime.now() + datetime.timedelta(seconds=sub["seconds"])
+                data["end"] = datetime.datetime.now() + datetime.timedelta(seconds=sub["seconds"])
         return data
+
+
+class StygianDetail(APIModel):
+    """Stygian Onslaught detail."""
+
+    unlocked: bool = Aliased("is_unlock")
+    difficulty: int
+    seconds_taken: int = Aliased("second")
+    outbreak: StygianOutbreak
 
 
 class Event(APIModel):
