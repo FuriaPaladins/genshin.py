@@ -119,6 +119,15 @@ class StygianDetail(APIModel):
     unlocked: bool = Aliased("is_unlock")
     difficulty: int
     seconds_taken: int = Aliased("second")
+    outbreak_end: timedelta
+
+    @model_validator(mode="before")
+    def extract_outbreak_end(cls, data):
+        if isinstance(data, dict):
+            sub = data.get("sub")
+            if sub and "seconds" in sub:
+                data["outbreak_end"] = timedelta(seconds=sub["seconds"])
+        return data
 
 
 class Event(APIModel):
