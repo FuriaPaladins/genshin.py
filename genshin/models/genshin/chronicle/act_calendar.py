@@ -3,7 +3,6 @@ import typing
 import datetime
 
 import pydantic
-from pydantic import model_validator
 
 from genshin.models.model import Aliased, APIModel, DateTime
 
@@ -116,14 +115,12 @@ class TheaterDetail(APIModel):
 
 class StygianOutbreak(APIModel):
     seconds: int
-    end: datetime.datetime
+    end: typing.Optional[datetime.datetime]
 
-    @model_validator(mode="before")
+    @pydantic.model_validator(mode="before")
     def extract_outbreak_end(cls, data):
-        if isinstance(data, dict):
-            sub = data.get("sub")
-            if sub and "seconds" in sub:
-                data["end"] = datetime.datetime.now() + datetime.timedelta(seconds=sub["seconds"])
+        if isinstance(data, dict) and "seconds" in data:
+            data["end"] = datetime.datetime.now() + datetime.timedelta(seconds=data["seconds"])
         return data
 
 
@@ -133,7 +130,7 @@ class StygianDetail(APIModel):
     unlocked: bool = Aliased("is_unlock")
     difficulty: int
     seconds_taken: int = Aliased("second")
-    outbreak: StygianOutbreak
+    outbreak: StygianOutbreak = Aliased("sub")
 
 
 class Event(APIModel):
