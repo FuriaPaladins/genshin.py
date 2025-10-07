@@ -6,20 +6,22 @@ on:
     branches:
       - master
     paths:
-      - 'genshin/**.py'
-      - 'noxfile.py'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - '.github/workflows/checks.yml'
+      - genshin/**.py
+      - noxfile.py
+      - pyproject.toml
+      - uv.lock
+      - .github/workflows/checks.yml
+      - .pre-commit-config.yaml
   pull_request:
     branches:
       - master
     paths:
-      - 'genshin/**.py'
-      - 'noxfile.py'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - '.github/workflows/checks.yml'
+      - genshin/**.py
+      - noxfile.py
+      - pyproject.toml
+      - uv.lock
+      - .github/workflows/checks.yml
+      - .pre-commit-config.yaml
 
 jobs:
   lint:
