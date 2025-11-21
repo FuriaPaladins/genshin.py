@@ -137,7 +137,7 @@ class Wish(BaseWish):
     """Wish made on any banner."""
 
     type: str = Aliased("item_type")
-    banner_type: GenshinBannerType
+    banner_type: GenshinBannerType = Aliased("gacha_type")
 
     @pydantic.field_validator("banner_type", mode="before")
     def __cast_banner_type(cls, v: typing.Any) -> int:

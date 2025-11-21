@@ -118,7 +118,7 @@ class WishClient(base.BaseClient):
             authkey=authkey,
             game=types.Game.GENSHIN,
         )
-        return [models.Wish(**i, banner_type=banner_type, tz_offset=tz_offset) for i in data]
+        return [models.Wish(**i, tz_offset=tz_offset) for i in data]
 
     async def _get_mw_wish_page(
         self,
