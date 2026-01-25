@@ -103,10 +103,16 @@ class ZZZBannerType(enum.IntEnum):
     """Rotating character banner."""
 
     WEAPON = 3
-    """Rotating weapon banner."""
+    """Rotating w-engine banner."""
 
     BANGBOO = 5
     """Bangboo banner."""
+
+    EXCLUSIVE_RESCREENING = 102
+    """Exclusive rescreening banner."""
+
+    REVERBERATION = 103
+    """W-Engine reverberation banner."""
 
     def to_chronicle_type(self) -> str:
         """Get the chronicle type string for this banner type."""
@@ -115,6 +121,8 @@ class ZZZBannerType(enum.IntEnum):
             ZZZBannerType.CHARACTER: "GACHA_TYPE_CHARACTER_UP",
             ZZZBannerType.WEAPON: "GACHA_TYPE_WEAPON_UP",
             ZZZBannerType.BANGBOO: "GACHA_TYPE_BANGBOO",
+            ZZZBannerType.EXCLUSIVE_RESCREENING: "GACHA_TYPE_CHARACTER_RETURN",
+            ZZZBannerType.REVERBERATION: "GACHA_TYPE_WEAPON_RETURN",
         }
         return mapping[self]
 

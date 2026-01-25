@@ -1,14 +1,14 @@
 """StarRail battle chronicle component."""
 
 import asyncio
+import contextlib
 import functools
 import typing
 
-from genshin import errors, types, utility
+from genshin import errors, paginators, types, utility
 from genshin.client import routes
 from genshin.models import zzz as models
 from genshin.models.genshin import gacha as gacha_models
-from genshin import paginators
 
 from . import base
 
@@ -222,7 +222,7 @@ class ZZZBattleChronicleClient(base.BaseBattleChronicleClient):
         previous: bool = ...,
         lang: typing.Optional[str] = ...,
         raw: typing.Literal[False] = ...,
-    ) -> models.ShiyuDefense: ...
+    ) -> typing.Union[models.ShiyuDefenseV1, models.ShiyuDefenseV2]: ...
     @typing.overload
     async def get_shiyu_defense(
         self,
@@ -239,18 +239,35 @@ class ZZZBattleChronicleClient(base.BaseBattleChronicleClient):
         previous: bool = False,
         lang: typing.Optional[str] = None,
         raw: bool = False,
-    ) -> typing.Union[models.ShiyuDefense, typing.Mapping[str, typing.Any]]:
+    ) -> typing.Union[models.ShiyuDefenseV1, models.ShiyuDefenseV2, typing.Mapping[str, typing.Any]]:
         """Get ZZZ Shiyu defense stats."""
-        payload = {"schedule_type": 2 if previous else 1, "need_all": "true"}
-        data = await self._request_zzz_record("challenge", uid, lang=lang, payload=payload)
+        payload = {"schedule_type": 2 if previous else 1}
+        data = await self._request_zzz_record("hadal_info_v2", uid, lang=lang, payload=payload)
+        version = data["hadal_ver"]  # v1 or v2
+        key = f"hadal_info_{version}"
+
+        if version == "v1":
+            data = data[key]
+        elif version == "v2":
+            nickname = data["nick_name"]
+            icon = data["icon"]
+            data = data[key]
+            data["nick_name"] = nickname
+            data["icon"] = icon
+        else:
+            msg = f"Unknown Shiyu Defense version: {version!r}"
+            raise ValueError(msg)
 
         account_tz = self.get_account_timezone(game=types.Game.ZZZ, uid=uid)
-        data["hadal_begin_time"]["tzinfo"] = account_tz
-        data["hadal_end_time"]["tzinfo"] = account_tz
+        with contextlib.suppress(KeyError):
+            data["hadal_begin_time"]["tzinfo"] = account_tz
+            data["hadal_end_time"]["tzinfo"] = account_tz
 
         if raw:
             return data
-        return models.ShiyuDefense(**data)
+        if version == "v2":
+            return models.ShiyuDefenseV2(**data)
+        return models.ShiyuDefenseV1(**data)
 
     @typing.overload
     async def get_deadly_assault(
@@ -350,7 +367,7 @@ class ZZZBattleChronicleClient(base.BaseBattleChronicleClient):
         lang: typing.Optional[str] = None,
         uid: typing.Optional[int] = None,
     ) -> typing.Sequence[gacha_models.SignalSearch]:
-        """Get a single page of chronicle signal searches."""
+        """Get a single page of battle chronicle signal searches."""
         uid = uid or await self._get_uid(types.Game.ZZZ)
         timezone = self.get_account_timezone(game=types.Game.ZZZ, uid=uid)
         if timezone is None:
@@ -391,7 +408,7 @@ class ZZZBattleChronicleClient(base.BaseBattleChronicleClient):
                 paginators.CursorPaginator(
                     functools.partial(
                         self._get_chronicle_signal_page,
-                        banner_type=typing.cast(gacha_models.ZZZBannerType, banner),
+                        banner_type=gacha_models.ZZZBannerType(banner),
                         lang=lang,
                         uid=uid,
                     ),

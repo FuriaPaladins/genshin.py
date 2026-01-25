@@ -1,8 +1,9 @@
-from enum import Enum
 import typing
+from enum import Enum
 
 import pydantic
-from genshin.models.model import APIModel, Aliased, UnixDateTime, prevent_enum_error
+
+from genshin.models.model import Aliased, APIModel, UnixDateTime, prevent_enum_error
 from genshin.models.zzz.character import ZZZElementType, ZZZSpecialty
 
 __all__ = (
@@ -42,6 +43,8 @@ class ZZZGachaEventType(Enum):
     WEAPON = "GACHA_TYPE_WEAPON_UP"
     PERMANENT = "GACHA_TYPE_PERMANENT"
     BANGBOO = "GACHA_TYPE_BANGBOO"
+    EXCLUSIVE_RESCREENING = "GACHA_TYPE_CHARACTER_RETURN"
+    REVERBERATION = "GACHA_TYPE_WEAPON_RETURN"
 
 
 class ZZZEvent(APIModel):

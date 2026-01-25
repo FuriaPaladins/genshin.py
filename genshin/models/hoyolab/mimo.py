@@ -44,6 +44,8 @@ class MimoTaskType(enum.IntEnum):
     """e.g. Log into Genshin Impact today"""
     GI_GAME = 6
     """e.g. Claim rewards from Ley Line Blossoms 2 times"""
+    GI_COMMUNITY = 101
+    """e.g. Browse today's must-see highlights"""
     HSR_GAME = 8
     """e.g. Complete Divergent Universe or Simulated Universe 1 time"""
     TRAILER = 10

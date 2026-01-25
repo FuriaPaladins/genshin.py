@@ -9,8 +9,7 @@ import warnings
 
 import yarl
 
-from genshin import types, utility
-from genshin import constants
+from genshin import constants, types, utility
 from genshin.client import cache as client_cache
 from genshin.client import routes
 from genshin.client.components import base
@@ -133,7 +132,7 @@ class HoyolabClient(base.BaseClient):
             raise ValueError("Cannot determine game for this traveling mimo request.")
 
         if game_id == 2 or self.game is types.Game.GENSHIN:
-            url = routes.MIMO_URL.get_url() / "nata" / endpoint.replace("-", "_")
+            url = routes.MIMO_URL.get_url() / "qiuqiu" / endpoint.replace("-", "_")
         else:
             url = routes.MIMO_URL.get_url() / endpoint
         return await self.request(url, method=method, params=params, data=data)
