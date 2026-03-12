@@ -1,6 +1,6 @@
 [project]
 name = "genshin"
-version = "1.7.23"
+version = "1.7.24"
 description = "API wrapper for HoYoLAB/Miyoushe API built on asyncio and pydantic."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -70,7 +70,7 @@ Repository = "https://github.com/seriaati/genshin.py.git"
 Issues = "https://github.com/seriaati/genshin.py/issues"
 
 [build-system]
-requires = ["uv_build>=0.9.0,<0.10.0"]
+requires = ["uv_build>=0.10.0,<0.11.0"]
 build-backend = "uv_build"
 
 [tool.hatch.build.targets.wheel]
