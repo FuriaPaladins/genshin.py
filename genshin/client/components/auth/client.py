@@ -23,7 +23,15 @@ from genshin.models.auth.cookie import (
     QRLoginResult,
     WebLoginResult,
 )
-from genshin.models.auth.geetest import MMT, MMTResult, RiskyCheckMMT, RiskyCheckMMTResult, SessionMMT, SessionMMTResult
+from genshin.models.auth.geetest import (
+    MMT,
+    MMTResult,
+    RiskyCheckMMT,
+    RiskyCheckMMTResult,
+    SessionMMT,
+    SessionMMTResult,
+    SessionMMTv4,
+)
 from genshin.models.auth.qrcode import QRCodeStatus
 from genshin.models.auth.verification import ActionTicket
 from genshin.utility import auth as auth_utility
@@ -178,7 +186,7 @@ class AuthClient(subclients.AppAuthClient, subclients.WebAuthClient, subclients.
             mmt_result = await server.solve_geetest(result, port=port)
             await self._send_mobile_otp(mobile, encrypted=encrypted, mmt_result=mmt_result)
 
-        otp = await server.enter_code(port=port)
+        otp = await server.enter_code()
         return await self._login_with_mobile_otp(mobile, otp, encrypted=encrypted)
 
     @base.region_specific(types.Region.OVERSEAS)
@@ -189,19 +197,19 @@ class AuthClient(subclients.AppAuthClient, subclients.WebAuthClient, subclients.
         *,
         encrypted: bool = False,
         port: int = 5000,
-        geetest_solver: typing.Optional[typing.Callable[[SessionMMT], typing.Awaitable[SessionMMTResult]]] = None,
+        geetest_solver: typing.Optional[types.AppGeetestSolver] = None,
         device_id: typing.Optional[str] = None,
         device_model: typing.Optional[str] = None,
         device_name: typing.Optional[str] = None,
     ) -> AppLoginResult:
         """Login with a password via HoYoLab app endpoint.
 
-        Note that this will start a webserver if either of the
-        following happens:
+        Note that this will start a webserver if captcha is
+        triggered and ``geetest_solver`` is not passed.
 
-        1. Captcha is triggered and `geetest_solver` is not passed.
-        2. Email verification is triggered (can happen if you
-        first login with a new device).
+        If email verification is triggered (can happen on first
+        login with a new device), the verification code will be
+        requested via CLI input.
 
         Raises
         ------
@@ -235,6 +243,27 @@ class AuthClient(subclients.AppAuthClient, subclients.WebAuthClient, subclients.
                 encrypted=encrypted,
                 mmt_result=mmt_result,
             )
+        elif isinstance(result, SessionMMTv4):
+            # v4 captcha triggered
+            if geetest_solver:
+                mmt_result = await geetest_solver(result)
+            else:
+                mmt_result = await server.solve_geetest(
+                    result,
+                    port=port,
+                    for_new_os_app=True,
+                    api_server=server.HOYOLAB_GT_SERVER,
+                )
+
+            result = await self._app_login(
+                account,
+                password,
+                device_id=device_id,
+                device_name=device_name,
+                device_model=device_model,
+                encrypted=encrypted,
+                mmt_result=mmt_result,
+            )
 
         if isinstance(result, ActionTicket):
             # Email verification required
@@ -245,7 +274,7 @@ class AuthClient(subclients.AppAuthClient, subclients.WebAuthClient, subclients.
                 else:
                     mmt_result = await server.solve_geetest(mmt, port=port)
 
-            code = await server.enter_code(port=port)
+            code = await server.enter_code()
             await self._verify_email(code, result)
 
             result = await self._app_login(
