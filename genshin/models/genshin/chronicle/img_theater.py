@@ -164,8 +164,28 @@ class ImgTheaterData(APIModel):
         return values
 
 
+class TarotCard(APIModel):
+    """Individual Tarot Card"""
+
+    icon: typing.Optional[str] = None
+    name: str
+    unlocked: bool = Aliased("is_unlock")
+    unlocked_count: int = Aliased("unlock_num")
+
+
+class TarotCards(APIModel):
+    """Tarot Card Data"""
+
+    current: int = Aliased("curr_num")
+    total: int = Aliased("total_num")
+
+    cards: typing.Sequence[TarotCard] = Aliased("list")
+
+
 class ImgTheater(APIModel):
     """Imaginarium theater."""
 
     datas: typing.Sequence[ImgTheaterData] = Aliased("data")
     unlocked: bool = Aliased("is_unlock")
+
+    tarot_cards: typing.Optional[TarotCards] = Aliased("tarot_card_state")
