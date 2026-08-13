@@ -162,6 +162,22 @@ class ArchonQuestProgress(APIModel):
     interchapters_finished: bool = Aliased("is_finish_all_interchapter")
 
 
+class WeekActiveProgress(APIModel):
+    """To Temper Thyself and Journey Far Event"""
+
+    weekly_progress_current: int = Aliased("progress_current")
+    weekly_progress_total: int = Aliased("progress_total")
+
+    event_progress_current: int = Aliased("period_progress_current")
+    event_progress_total: int = Aliased("period_progress_total")
+
+    current_progress: list[int] = Aliased("progress_current_arr")
+    current_weekday: int
+
+    is_active_period: bool
+    unlocked: bool = Aliased("unlock")
+
+
 class Notes(APIModel):
     """Real-Time notes."""
 
@@ -186,6 +202,8 @@ class Notes(APIModel):
     max_expeditions: int = Aliased("max_expedition_num")
 
     archon_quest_progress: ArchonQuestProgress
+
+    week_active_progress: WeekActiveProgress
 
     @pydantic.field_validator("remaining_resin_recovery_time", "remaining_realm_currency_recovery_time", mode="before")
     def __process_timedelta(cls, v: str) -> datetime.timedelta:
