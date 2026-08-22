@@ -34,7 +34,8 @@ def parse_loose_headers(
     loose_headers: typing.Optional[aiohttp.typedefs.LooseHeaders] = None,
 ) -> multidict.CIMultiDict[str]:
     """Parse loose aiohttp headers."""
-    return multidict.CIMultiDict((str(k), str(v)) for k, v in dict(loose_headers or ()).items())
+    headers: typing.Dict[typing.Any, typing.Any] = dict(loose_headers or ())
+    return multidict.CIMultiDict((str(k), str(v)) for k, v in headers.items())
 
 
 class BaseClient(abc.ABC):
@@ -581,7 +582,7 @@ class BaseClient(abc.ABC):
         if game is None:
             return None
 
-        uid = uid or self.uid
+        uid = uid or self.uids.get(game)
         if uid is None:
             return None
 
@@ -601,14 +602,31 @@ class BaseClient(abc.ABC):
         game: typing.Optional[types.Game] = None,
         uid: typing.Optional[int] = None,
     ) -> typing.Mapping[str, typing.Any]:
-        """Add timezone info to a data dict based on the default game account."""
-        tz = self.get_account_timezone(game=game, uid=uid)
-        if tz is not None:
-            data = dict(data)
-            for key in keys:
-                if key in data and isinstance(data[key], dict):
-                    data[key]["tzinfo"] = tz
+        """Recursively add timezone info to a data dict based on the default game account.
 
+        Datetime dicts found under the given keys get a "tzinfo" entry added, unix timestamp
+        values get wrapped into {"timestamp": ..., "tzinfo": ...} dicts.
+        """
+        tz = self.get_account_timezone(game=game, uid=uid)
+        if tz is None:
+            return data
+
+        def add_tz(value: typing.Any) -> None:
+            if isinstance(value, dict):
+                value = typing.cast("typing.Dict[str, typing.Any]", value)
+                for key, item in value.items():
+                    if key in keys and isinstance(item, dict) and item:
+                        item["tzinfo"] = tz
+                    elif key in keys and (isinstance(item, int) or (isinstance(item, str) and item.isdigit())):
+                        value[key] = {"timestamp": item, "tzinfo": tz}
+                    else:
+                        add_tz(item)
+            elif isinstance(value, list):
+                for item in typing.cast("typing.List[typing.Any]", value):
+                    add_tz(item)
+
+        data = dict(data)
+        add_tz(data)
         return data
 
 
