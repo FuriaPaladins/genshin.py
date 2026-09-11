@@ -482,6 +482,33 @@ class HoyolabClient(base.BaseClient):
         )
         return models.MimoLotteryResult(**data)
 
+    @base.region_specific(types.Region.OVERSEAS)
+    async def get_mimo_point_history(
+        self,
+        operation: models.MimoPointOperation,
+        *,
+        page: int = 1,
+        page_size: int = 20,
+        game_id: typing.Optional[int] = None,
+        version_id: typing.Optional[int] = None,
+        game: typing.Optional[typing.Union[typing.Literal["hoyolab"], types.Game]] = None,
+        lang: typing.Optional[str] = None,
+    ) -> typing.Sequence[models.MimoPointRecord]:
+        """Get the Traveling Mimo point history for the given operation (income or expense)."""
+        game_id, version_id = await self._parse_mimo_args(game_id, version_id, game)
+        data = await self._request_mimo(
+            "point-record",
+            params=dict(
+                game_id=game_id,
+                lang=lang or self.lang,
+                version_id=version_id,
+                operator_type=operation.value,
+                page=page,
+                page_size=page_size,
+            ),
+        )
+        return [models.MimoPointRecord(**i) for i in data["list"]]
+
     async def reply_to_post(self, content: str, *, post_id: int) -> int:
         """Reply to a community post."""
         data = await self.request_bbs(
@@ -549,13 +576,13 @@ class HoyolabClient(base.BaseClient):
         """Get a list of accompany characters, this endpoint doesn't require cookies."""
         data = await self.request_bbs(
             "community/painter/api/getChannelRoleList",
-            cache=client_cache.cache_key("accp_chars"),
+            cache=client_cache.cache_key("accp_chars", lang=lang or self.lang),
             method="POST",
             lang=lang,
         )
         return [models.AccompanyCharacterGame(**i) for i in data["game_roles_list"]]
 
-    def _complete_stuid_cookie(self) -> None:
+    async def _complete_stuid_cookie(self) -> None:
         """Add the stuid cookie if it is missing.
 
         Accompany endpoints authenticate with the stoken and require the account id
@@ -567,12 +594,12 @@ class HoyolabClient(base.BaseClient):
 
         cookies = self.cookie_manager.cookies
         if cookies and "stoken" in cookies and "stuid" not in cookies and self.cookie_manager.user_id is not None:
-            cookies["stuid"] = str(self.cookie_manager.user_id)
+            await self.cookie_manager.update_cookies({"stuid": str(self.cookie_manager.user_id)})
 
     @base.region_specific(types.Region.OVERSEAS)
     async def accompany_character(self, *, role_id: int, topic_id: int) -> models.AccompanyResult:
         """Accompany a character, role_id and topic_id can be found by calling get_accompany_characters."""
-        self._complete_stuid_cookie()
+        await self._complete_stuid_cookie()
         data = await self.request_bbs(
             "community/apihub/api/user/accompany/role", params=dict(role_id=role_id, topic_id=topic_id)
         )
@@ -583,7 +610,7 @@ class HoyolabClient(base.BaseClient):
         self, *, topic_id: int, lang: typing.Optional[str] = None
     ) -> models.AccompanyCharacterDetails:
         """Get the page details of an accompany character, topic_id can be found by calling get_accompany_characters."""
-        self._complete_stuid_cookie()
+        await self._complete_stuid_cookie()
         data = await self.request_bbs(
             "community/painter/api/topic/info",
             params=dict(topic_id=topic_id, scene="SceneAll"),
@@ -612,7 +639,7 @@ class HoyolabClient(base.BaseClient):
         sync_all_roles: bool = False,
     ) -> None:
         """Set the voice and subtitle language setting of an accompany character."""
-        self._complete_stuid_cookie()
+        await self._complete_stuid_cookie()
         setting = dict(
             voice_script_setting=dict(
                 script_lang=script_lang,

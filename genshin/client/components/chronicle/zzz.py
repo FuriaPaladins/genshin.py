@@ -7,6 +7,8 @@ import typing
 
 from genshin import errors, paginators, types, utility
 from genshin.client import routes
+from genshin.client.manager import cookie as cookie_utility
+from genshin.client.manager import managers
 from genshin.models import zzz as models
 from genshin.models.genshin import gacha as gacha_models
 from genshin.utility import ds
@@ -302,7 +304,13 @@ class ZZZBattleChronicleClient(base.BaseBattleChronicleClient):
             await self._do_login_upgrade_guide(uid, lang=lang)
 
     async def _do_login_upgrade_guide(self, uid: int, *, lang: typing.Optional[str] = None) -> None:
-        """Perform the upgrade guide login request (must be called while holding the login lock)."""
+        """Perform the upgrade guide login request (must be called while holding the login lock).
+
+        The badge login authenticates with the cookie token, which is invalidated whenever
+        a newer one is minted for the account elsewhere while the other cookies stay valid.
+        When the login is rejected and an stoken is available, a fresh cookie token is
+        minted from it and the login is retried once.
+        """
         lang = lang or self.lang
         region = utility.recognize_region(uid, game=types.Game.ZZZ) or types.Region.OVERSEAS
         body = {
@@ -312,12 +320,34 @@ class ZZZBattleChronicleClient(base.BaseBattleChronicleClient):
             "uid": str(uid),
         }
         with self._suppress_device_id():
-            await self.request(
-                routes.NAP_BADGE_LOGIN_URL.get_url(region),
-                method="POST",
-                data=body,
-                headers=self._upgrade_guide_headers(region, lang=lang, data=body),
-            )
+            try:
+                await self.request(
+                    routes.NAP_BADGE_LOGIN_URL.get_url(region),
+                    method="POST",
+                    data=body,
+                    headers=self._upgrade_guide_headers(region, lang=lang, data=body),
+                )
+            except errors.InvalidCookies:
+                if not isinstance(self.cookie_manager, managers.CookieManager):
+                    raise
+                cookies = dict(self.cookie_manager.cookies)
+                if not cookies.get("stoken"):
+                    raise
+
+                new_cookies: typing.Mapping[str, str]
+                if region is types.Region.CHINESE:
+                    data = await cookie_utility.cn_fetch_cookie_token_with_stoken_v2(cookies)
+                    new_cookies = {"account_id": data["uid"], "cookie_token": data["cookie_token"]}
+                else:
+                    new_cookies = await cookie_utility.fetch_cookie_with_stoken_v2(cookies, token_types=[4])
+                await self.cookie_manager.update_cookies(new_cookies)
+
+                await self.request(
+                    routes.NAP_BADGE_LOGIN_URL.get_url(region),
+                    method="POST",
+                    data=body,
+                    headers=self._upgrade_guide_headers(region, lang=lang, data=body),
+                )
 
     async def _request_upgrade_guide(
         self,
@@ -455,7 +485,12 @@ class ZZZBattleChronicleClient(base.BaseBattleChronicleClient):
             msg = f"Unknown Shiyu Defense version: {version!r}"
             raise ValueError(msg)
 
-        self._add_timezone_to_data(data, ("hadal_begin_time", "hadal_end_time"), game=types.Game.ZZZ, uid=uid)
+        data = self._add_timezone_to_data(
+            data,
+            ("hadal_begin_time", "hadal_end_time", "challenge_time", "floor_challenge_time"),
+            game=types.Game.ZZZ,
+            uid=uid,
+        )
 
         if raw:
             return data
@@ -495,7 +530,9 @@ class ZZZBattleChronicleClient(base.BaseBattleChronicleClient):
             "hadal_mem_detail_v2", uid, lang=lang, payload=payload, use_uid_in_payload=True
         )
 
-        self._add_timezone_to_data(data, ("start_time", "end_time"), game=types.Game.ZZZ, uid=uid)
+        data = self._add_timezone_to_data(
+            data, ("start_time", "end_time", "challenge_time"), game=types.Game.ZZZ, uid=uid
+        )
 
         if raw:
             return data
@@ -603,6 +640,7 @@ class ZZZBattleChronicleClient(base.BaseBattleChronicleClient):
             use_uid_in_payload=True,
         )
         data = data["void_front_battle_detail"]
+        data = self._add_timezone_to_data(data, ("challenge_time",), game=types.Game.ZZZ, uid=uid)
         if raw:
             return data
         return models.ThresholdSimulation(**data)

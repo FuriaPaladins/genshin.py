@@ -18,9 +18,9 @@ client = genshin.Client({"ltuid": ..., "ltoken": ...})
 
 # set dynamically
 client = genshin.Client()
-client.set_cookies({"ltuid": ..., "ltoken": ...}) # mapping
-client.set_cookies(ltuid=..., ltoken=...) # kwargs
-client.set_cookies("ltuid=...; ltoken=...") # cookie header
+client.set_cookies({"ltuid": ..., "ltoken": ...})  # mapping
+client.set_cookies(ltuid=..., ltoken=...)  # kwargs
+client.set_cookies("ltuid=...; ltoken=...")  # cookie header
 ```
 
 ### How can I get my cookies?
@@ -76,6 +76,24 @@ For some endpoints like `redeem_code`, you might need to set `account_id` and `c
 
 If you know you will be redeeming gifts and also use other endpoints, you should "complete" your cookies before saving them in for example database with `cookies = await genshin.complete_cookies(...)`
 
+### Persisting updated cookies
+
+The client sometimes updates its own cookies while making requests, for example when it mints a new `cookie_token` from an `stoken` or when a response sets additional cookies. If you store cookies externally (e.g. in a database), these changes are otherwise lost and the refresh has to happen again the next time a client is created.
+
+Set `on_cookie_update` to be notified with a copy of the full cookie mapping every time this happens. The callback may be sync or async.
+
+```py
+async def save_cookies(cookies: typing.Mapping[str, str]) -> None:
+    await db.update_cookies(user_id, cookies)
+
+
+client = genshin.Client(cookies, on_cookie_update=save_cookies)
+# or later
+client.on_cookie_update = save_cookies
+```
+
+The hook is only called for changes made by the library; calling `set_cookies` yourself does not trigger it. Exceptions raised by the hook propagate to the request that caused the update.
+
 ## Authkey
 
 Authkeys are an alternative authentication used mostly for paginators like `client.wish_history()` and `client.transaction_log()`. They last only 24 hours, and it's impossible to do any write operations with them. That means authkeys, unlike cookies, are absolutely safe to share.
@@ -119,6 +137,20 @@ Difficult, check <https://gist.github.com/jogerj/2372d0e5bee51e001a6d8956240d527
 #### iOS
 
 No clue, maybe use a sniffer.
+
+### Fetching authkeys with cookies
+
+On HoYoLAB accounts, an authkey can be generated directly from cookies that contain a `cookie_token_v2` (together with `account_mid_v2` and `account_id_v2`). The authkey is stored on the client so paginators can use it right away.
+
+```py
+client = genshin.Client(cookies, game=genshin.Game.GENSHIN)
+authkey = await client.fetch_authkey()
+
+async for wish in client.wish_history():
+    pass
+```
+
+Transaction logs use a different kind of authkey, pass `auth_appid="csc"` to generate one for them.
 
 ### Setting authkeys automatically
 

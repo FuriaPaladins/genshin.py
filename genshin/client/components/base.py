@@ -34,7 +34,8 @@ def parse_loose_headers(
     loose_headers: typing.Optional[aiohttp.typedefs.LooseHeaders] = None,
 ) -> multidict.CIMultiDict[str]:
     """Parse loose aiohttp headers."""
-    return multidict.CIMultiDict((str(k), str(v)) for k, v in dict(loose_headers or ()).items())
+    headers: typing.Dict[typing.Any, typing.Any] = dict(loose_headers or ())
+    return multidict.CIMultiDict((str(k), str(v)) for k, v in headers.items())
 
 
 class BaseClient(abc.ABC):
@@ -85,8 +86,10 @@ class BaseClient(abc.ABC):
         headers: typing.Optional[aiohttp.typedefs.LooseHeaders] = None,
         cache: typing.Optional[client_cache.BaseCache] = None,
         debug: bool = False,
+        on_cookie_update: typing.Optional[managers.CookieUpdateHook] = None,
     ) -> None:
         self.cookie_manager = managers.BaseCookieManager.from_cookies(cookies)
+        self.on_cookie_update = on_cookie_update
         self.cache = cache or client_cache.StaticCache()
 
         self.uids = {}
@@ -257,19 +260,37 @@ class BaseClient(abc.ABC):
         level = logging.DEBUG if debug else logging.NOTSET
         logging.getLogger("genshin").setLevel(level)
 
+    @property
+    def on_cookie_update(self) -> typing.Optional[managers.CookieUpdateHook]:
+        """Callback invoked with a copy of the cookies whenever the client updates them itself.
+
+        This happens for example when a new cookie_token is minted from an stoken or when
+        a response sets new cookies. May be a sync or async callable. Use it to persist
+        refreshed cookies so the next client created from storage does not need to refresh again.
+        """
+        return self.cookie_manager.on_cookie_update
+
+    @on_cookie_update.setter
+    def on_cookie_update(self, hook: typing.Optional[managers.CookieUpdateHook]) -> None:
+        self.cookie_manager.on_cookie_update = hook
+
     def set_cookies(self, cookies: typing.Optional[managers.AnyCookieOrHeader] = None, **kwargs: typing.Any) -> None:
         """Parse and set cookies."""
         if not bool(cookies) ^ bool(kwargs):
             raise TypeError("Cannot use both positional and keyword arguments at once")
 
+        hook = self.on_cookie_update
         self.cookie_manager = managers.BaseCookieManager.from_cookies(cookies or kwargs)
+        self.on_cookie_update = hook
 
     def set_browser_cookies(self, browser: typing.Optional[str] = None) -> None:
         """Extract cookies from your browser and set them as client cookies.
 
         Available browsers: chrome, chromium, opera, edge, firefox.
         """
+        hook = self.on_cookie_update
         self.cookie_manager = managers.BaseCookieManager.from_browser_cookies(browser)
+        self.on_cookie_update = hook
 
     def set_authkey(self, authkey: typing.Optional[str] = None, *, game: typing.Optional[types.Game] = None) -> None:
         """Set an authkey for wish & transaction logs.
@@ -581,7 +602,7 @@ class BaseClient(abc.ABC):
         if game is None:
             return None
 
-        uid = uid or self.uid
+        uid = uid or self.uids.get(game)
         if uid is None:
             return None
 
@@ -601,14 +622,31 @@ class BaseClient(abc.ABC):
         game: typing.Optional[types.Game] = None,
         uid: typing.Optional[int] = None,
     ) -> typing.Mapping[str, typing.Any]:
-        """Add timezone info to a data dict based on the default game account."""
-        tz = self.get_account_timezone(game=game, uid=uid)
-        if tz is not None:
-            data = dict(data)
-            for key in keys:
-                if key in data and isinstance(data[key], dict):
-                    data[key]["tzinfo"] = tz
+        """Recursively add timezone info to a data dict based on the default game account.
 
+        Datetime dicts found under the given keys get a "tzinfo" entry added, unix timestamp
+        values get wrapped into {"timestamp": ..., "tzinfo": ...} dicts.
+        """
+        tz = self.get_account_timezone(game=game, uid=uid)
+        if tz is None:
+            return data
+
+        def add_tz(value: typing.Any) -> None:
+            if isinstance(value, dict):
+                value = typing.cast("typing.Dict[str, typing.Any]", value)
+                for key, item in value.items():
+                    if key in keys and isinstance(item, dict) and item:
+                        item["tzinfo"] = tz
+                    elif key in keys and (isinstance(item, int) or (isinstance(item, str) and item.isdigit())):
+                        value[key] = {"timestamp": item, "tzinfo": tz}
+                    else:
+                        add_tz(item)
+            elif isinstance(value, list):
+                for item in typing.cast("typing.List[typing.Any]", value):
+                    add_tz(item)
+
+        data = dict(data)
+        add_tz(data)
         return data
 
 
