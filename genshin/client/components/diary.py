@@ -159,19 +159,25 @@ class DiaryClient(base.BaseClient):
         data = await self.request_ledger(uid, game=game, month=month, lang=lang, cache=cache_key)
         return models.Diary(**data)
 
+    @managers.requires_cookie_token
     async def get_starrail_diary(
         self,
         uid: typing.Optional[int] = None,
         *,
-        month: typing.Optional[int] = None,
+        month: typing.Optional[str] = None,
         lang: typing.Optional[str] = None,
     ) -> models.StarRailDiary:
-        """Get a blazer's diary with earning details for the month."""
+        """Get a blazer's diary with earning details for the month.
+
+        Args:
+            uid: The game UID; defaults to the client's Star Rail UID.
+            month: The month in "YYYYMM" format; defaults to the current month.
+            lang: The language to use; defaults to the client's language.
+        """
         game = types.Game.STARRAIL
         uid = uid or await self._get_uid(game)
-        cache_key = cache.cache_key(
-            "diary", uid=uid, game=game, month=month or datetime.datetime.now(CN_TIMEZONE).month, lang=lang or self.lang
-        )
+        month = month or datetime.datetime.now(CN_TIMEZONE).strftime("%Y%m")
+        cache_key = cache.cache_key("diary", uid=uid, game=game, month=month, lang=lang or self.lang)
         data = await self.request_ledger(uid, game=game, month=month, lang=lang, cache=cache_key)
         return models.StarRailDiary(**data)
 
@@ -234,6 +240,7 @@ class DiaryClient(base.BaseClient):
             limit=limit,
         )
 
+    @managers.requires_cookie_token
     async def _get_starrail_diary_page(
         self,
         page: int,
